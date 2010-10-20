@@ -1,0 +1,31 @@
+# Specify all logrotate configurations here
+
+# Rotate Nginx logs and signal reload
+<%= node[:nginx][:log_dir] %>/*.log 
+{
+	daily
+	rotate 7
+	missingok
+	notifempty
+	compress
+	delaycompress
+	sharedscripts
+	create 640 www-data www-data
+	postrotate
+		[ ! -f <%= node[:nginx][:pid_file] %> ] || kill -USR1 `cat <%= node[:nginx][:pid_file] %>`
+	endscript
+}
+
+# Rotate Rails log and restart Passenger
+/var/www/mobdub/current/log/production.log 
+{
+	daily
+	rotate 7
+	missingok
+	notifempty
+	compress
+	delaycompress
+	postrotate
+		touch /var/www/mobdub/current/tmp/restart.txt
+	endscript
+}

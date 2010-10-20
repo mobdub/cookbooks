@@ -1,0 +1,82 @@
+# Specify Nginx and Passenger configuration here
+
+# user for nginx workers
+user <%= node[:nginx][:user] %>;
+
+# path to error log file
+error_log <%= node[:nginx][:log_dir] %>/error.log;
+
+# process settings
+pid <%= node[:nginx][:pid_file] %>;
+worker_processes  <%= node[:nginx][:worker_processes] %>;
+worker_rlimit_nofile 10000;
+
+events {
+    worker_connections  10024;
+}
+
+http {
+    # passenger_root /opt/ruby-enterprise/lib/ruby/gems/1.8/gems/passenger-2.2.8;
+    passenger_root /usr/lib/ruby/gems/1.8/gems/passenger-2.2.15;
+    passenger_ruby /usr/bin/ruby1.8;
+
+    # disable smart spawning to avoid memcache bug
+    # rails_spawn_method conservative;
+
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile      on;
+    tcp_nopush    on;
+    tcp_nodelay   on;
+    gzip          on;
+
+    access_log  <%= node[:nginx][:log_dir] %>/access.log;
+    keepalive_timeout 120;
+
+    server {
+        listen  80;
+        server_name  appserver.localhost;
+        root /var/www/mobdub/current/public;
+        passenger_enabled on;
+        index index.html index.htm;
+        client_max_body_size 50M;
+ 
+        if (-f $document_root/system/maintenance.html) {
+          rewrite ^(.*)$ /system/maintenance.html break;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443;
+    #    server_name  localhost;
+
+    #    ssl                  on;
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_timeout  5m;
+
+    #    ssl_protocols  SSLv2 SSLv3 TLSv1;
+    #    ssl_ciphers  ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP;
+    #    ssl_prefer_server_ciphers   on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+}
